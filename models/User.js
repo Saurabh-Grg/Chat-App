@@ -1,35 +1,38 @@
-//models/User.js
-const bcrypt = require('bcryptjs');
-const db = require('../config/db');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db');
 
-// Define the User schema (just basic properties for now)
-const User = {
-  create: (username, email, password, callback) => {
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`;
-    db.query(query, [username, email, hashedPassword], callback);
+// Define the User model
+const User = sequelize.define('User', {
+  username: {
+    type: DataTypes.STRING,
+    allowNull: false,
   },
-
-  findByEmail: (email, callback) => {
-    const query = `SELECT * FROM users WHERE email = ?`;
-    db.query(query, [email], callback);
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
   },
-
-  findById: (id, callback) => {
-    const query = `SELECT * FROM users WHERE id = ?`;
-    db.query(query, [id], callback);
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
   },
-  // New method to update user profile
-  updateProfile: (userId, statusMessage, profilePicture, onlineStatus, callback) => {
-    const query = `UPDATE users SET status_message = ?, profile_picture = ?, online_status = ? WHERE id = ?`;
-    db.query(query, [statusMessage, profilePicture, onlineStatus, userId], callback);
+  status_message: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
-
-  // New method to get user profile information
-  getProfile: (userId, callback) => {
-    const query = `SELECT username, email, profile_picture, status_message, online_status FROM users WHERE id = ?`;
-    db.query(query, [userId], callback);
+  profile_picture: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  online_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
   }
-};
+}, {
+  timestamps: true, // Automatically adds `createdAt` and `updatedAt`
+});
+
+// Sync the model with the database (creates the table if it doesn't exist)
+User.sync();
 
 module.exports = User;

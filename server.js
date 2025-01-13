@@ -2,6 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const Message = require('./models/Message'); 
 const http = require('http');
 const socketIo = require('socket.io');
 const multer = require('multer');
@@ -36,6 +38,7 @@ app.use(bodyParser.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/messages', messageRoutes);
 
 // File upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {
@@ -49,25 +52,49 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 // Socket.io connection event
 io.on('connection', (socket) => {
-    console.log('A user connected');
+  console.log('A user connected');
+
+  // Handle incoming text messages
+  socket.on('send_message', async (data) => {
+    const { senderId, receiverId, message } = data;
+    console.log('Message received from sender:', senderId, 'to receiver:', receiverId, 'Message:', message);
+
+    // Save the message to the database
+    try {
+        await Message.create({
+          senderId: senderId,
+          receiverId: receiverId,
+          message: message,
+          messageType: 'text',
+        });
   
-    // Handle incoming text messages
-    socket.on('send_message', (data) => {
-      console.log('Message received:', data);
-      io.emit('receive_message', data);  // Broadcast to all users or specific rooms
-    });
-  
-    // Handle media messages (image, audio, video)
-    socket.on('send_media', (data) => {
-      console.log('Media received:', data);
-      io.emit('receive_media', data);  // Broadcast the media data
-    });
-  
-    // Handle disconnect event
-    socket.on('disconnect', () => {
-      console.log('User disconnected');
-    });
+        // Emit the message to the specific receiver only
+        socket.to(receiverId).emit('receive_message', { senderId, message });
+      } catch (error) {
+        console.error('Error saving message:', error);
+      }
   });
+
+  // Join room for the user based on their userId
+  socket.on('join', (userId) => {
+    console.log(`User ${userId} joined`);
+    socket.join(userId); // Join a room with userId as the room name
+  });
+
+  // Handle media messages (image, audio, video)
+  socket.on('send_media', (data) => {
+    const { senderId, receiverId, fileUrl } = data;
+    console.log('Media received from sender:', senderId, 'to receiver:', receiverId, 'File URL:', fileUrl);
+
+    // Emit the media to the specific receiver only
+    socket.to(receiverId).emit('receive_media', { senderId, fileUrl });
+  });
+
+  // Handle disconnect event
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);

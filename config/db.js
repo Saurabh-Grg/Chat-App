@@ -1,19 +1,19 @@
-const mysql = require('mysql2');
-// console.log('Using database:', process.env.DB_NAME);  // Debugging log
+const { Sequelize } = require('sequelize');
 
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '', // Leave empty if there's no password
-    database: 'chatapp',
-  });
-  
-connection.connect(err => {
-  if (err) {
-    console.error('Error connecting to the database:', err.stack);  // Debugging log
-    return;
-  }
-  console.log('Connected to the MySQL database');
+// Database connection setup
+const sequelize = new Sequelize('chatapp', 'root', '', {
+  host: 'localhost',  // Change 'root' to 'localhost' as the host
+  dialect: 'mysql',
+  logging: false,  // Set to true if you want to see SQL queries
 });
 
-module.exports = connection;
+// Authenticate the connection
+sequelize.authenticate()
+  .then(() => {
+    console.log('Connected to the MySQL database');
+  })
+  .catch((err) => {
+    console.error('Error connecting to the database:', err.stack);  // Debugging log
+  });
+
+module.exports = sequelize;
