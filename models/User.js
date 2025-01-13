@@ -1,3 +1,4 @@
+//models/User.js
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 
