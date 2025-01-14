@@ -54,25 +54,32 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  // Handle incoming text messages
-  socket.on('send_message', async (data) => {
+  // Server-side: socket.io event to handle message sending
+socket.on('send_message', async (data) => {
     const { senderId, receiverId, message } = data;
     console.log('Message received from sender:', senderId, 'to receiver:', receiverId, 'Message:', message);
-
-    // Save the message to the database
-    try {
-        await Message.create({
-          senderId: senderId,
-          receiverId: receiverId,
-          message: message,
-          messageType: 'text',
-        });
   
-        // Emit the message to the specific receiver only
-        socket.to(receiverId).emit('receive_message', { senderId, message });
-      } catch (error) {
-        console.error('Error saving message:', error);
-      }
+    try {
+      // Save the message to the database
+      const savedMessage = await Message.create({
+        senderId: senderId,
+        receiverId: receiverId,
+        message: message,
+        messageType: 'text', // You can modify this if it's a media message
+      });
+  
+      // Emit the message to the receiver only
+      socket.to(receiverId).emit('receive_message', {
+        senderId,
+        message: savedMessage.message, // Use the message from the database
+      });
+  
+      // Emit back to the sender (optional, for confirmation)
+      socket.emit('message_sent', { senderId, message: savedMessage.message });
+  
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
   });
 
   // Join room for the user based on their userId
